@@ -26,30 +26,32 @@ public class FileService {
     private final FileRepository fileRepository;
 
     public FileService(@Value("${gcp.bucket.name}") String bucketName, FileRepository fileRepository) {
-        System.out.println("BuekctNmase " + bucketName);
         this.fileRepository = fileRepository;
         this.storage = StorageOptions.getDefaultInstance().getService();
         this.bucketName = bucketName;
     }
 
-    public void uploadFiles(MultipartFile[] files) throws Exception {
-        for (MultipartFile multipartFile : files) {           
-            if (multipartFile.isEmpty()) {               
+    public String uploadFiles(MultipartFile[] files) throws Exception {
+        String urlFile = null;
+        for (MultipartFile multipartFile : files) {
+            if (multipartFile.isEmpty()) {
                 throw new Exception("El archivo está vacio");
-            } else {               
+            } else {
                 try {
                     File file = new File();
                     System.out.println("Entra#3 " + multipartFile.getOriginalFilename());
                     file.setName(multipartFile.getOriginalFilename());
-                    file.setUrl(String.format("https://storage.googleapis.com/%s/%s", bucketName, file.getName()));
+                    urlFile = String.format("https://storage.googleapis.com/%s/%s", bucketName, file.getName());
+                    file.setUrl(urlFile);
                     BlobInfo blobInfo = BlobInfo.newBuilder(bucketName, file.getName()).build();
                     storage.create(blobInfo, multipartFile.getBytes());
                     //fileRepository.save(file);
                 } catch (IOException e) {
-                    throw new RuntimeException("Error al subir el archivo", e);
+                    e.printStackTrace();
+                    throw new Exception("Error al subir el archivo", e);
                 }
             }
-
         }
+        return urlFile;
     }
 }

@@ -5,6 +5,7 @@
 package com.uniandes.modernizacion.controller;
 
 import com.uniandes.modernizacion.service.FileService;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,16 +26,16 @@ public class FileController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFiles(@RequestParam("files") MultipartFile[] files) {
+    public ResponseEntity<Map<String, String>> uploadFiles(@RequestParam("files") MultipartFile[] files) {
         if (files.length == 0) {
-            return ResponseEntity.badRequest().body("There is no files to be procesed");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "There is no files to be procesed"));
         }
         try {
-            fileService.uploadFiles(files);
+            return ResponseEntity.ok(Map.of("fileUrl", fileService.uploadFiles(files)));
         } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", ex.getMessage()));
         }
-
-        return ResponseEntity.ok("Files has been uploaded");
     }
 }

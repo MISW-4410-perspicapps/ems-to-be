@@ -50,40 +50,40 @@ class JwtUtilRoleTest {
     @Test
     void extractRoleFromToken_AdminRole_shouldReturnAdmin() {
         String token = createTestToken("andresclavijor", "1", "1", "Andres", "TRUE");
-        
-        Role role = jwtUtil.getRoleFromToken(token);
-        
-        assertEquals(Role.ADMIN, role);
+
+        JwtUtil.TokenInfo tokenInfo = jwtUtil.parseAndValidateToken(token);
+
+        assertEquals(Role.ADMIN, tokenInfo.getRole());
     }
 
     @Test
     void extractRoleFromToken_ManagerRole_shouldReturnManager() {
         String token = createTestToken("manager", "2", "2", "Manager", "TRUE");
-        
-        Role role = jwtUtil.getRoleFromToken(token);
-        
-        assertEquals(Role.MANAGER, role);
+
+        JwtUtil.TokenInfo tokenInfo = jwtUtil.parseAndValidateToken(token);
+
+        assertEquals(Role.MANAGER, tokenInfo.getRole());
     }
 
     @Test
     void extractRoleFromToken_EmployeeRole_shouldReturnEmployee() {
         String token = createTestToken("employee", "3", "3", "Employee", "TRUE");
         
-        Role role = jwtUtil.getRoleFromToken(token);
-        
-        assertEquals(Role.EMPLOYEE, role);
+        JwtUtil.TokenInfo tokenInfo = jwtUtil.parseAndValidateToken(token);
+
+        assertEquals(Role.EMPLOYEE, tokenInfo.getRole());
     }
 
     @Test
     void extractUserInfoFromToken_shouldExtractAllFields() {
         String token = createTestToken("andresclavijor", "1", "1", "Andres", "TRUE");
-        
-        String username = jwtUtil.getUsernameFromToken(token);
-        String userId = jwtUtil.getUserIdFromToken(token);
-        Role role = jwtUtil.getRoleFromToken(token);
-        String firstName = jwtUtil.getFirstNameFromToken(token);
-        String activityStatus = jwtUtil.getActivityStatusFromToken(token);
-        
+        JwtUtil.TokenInfo tokenInfo = jwtUtil.parseAndValidateToken(token);
+        String username = tokenInfo.getUsername();
+        String userId = tokenInfo.getUserId();
+        Role role = tokenInfo.getRole();
+        String firstName = tokenInfo.getFirstName();
+        String activityStatus = tokenInfo.getActivityStatus();
+
         assertEquals("andresclavijor", username);
         assertEquals("1", userId);
         assertEquals(Role.ADMIN, role);
@@ -94,14 +94,14 @@ class JwtUtilRoleTest {
     @Test
     void validateToken_withValidToken_shouldReturnTrue() {
         String token = createTestToken("testuser", "1", "1", "Test", "TRUE");
-        
-        assertTrue(jwtUtil.validateToken(token));
+        JwtUtil.TokenInfo tokenInfo = jwtUtil.parseAndValidateToken(token);
+        assertNotNull(tokenInfo);
     }
 
     @Test
     void validateToken_withInvalidToken_shouldReturnFalse() {
         String invalidToken = "invalid-token";
-        
-        assertFalse(jwtUtil.validateToken(invalidToken));
+        JwtUtil.TokenInfo tokenInfo = jwtUtil.parseAndValidateToken(invalidToken);
+        assertNull(tokenInfo);
     }
 }

@@ -3,11 +3,11 @@ spring:
     name: gateway
   cloud:
     gateway:
-      filter:
-        secure-headers:
-          enabled: true
       server:
         webflux:
+          filter:
+            secure-headers:
+              enabled: true
           discovery:
             locator:
               enabled: false

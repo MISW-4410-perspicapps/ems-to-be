@@ -31,58 +31,74 @@ public class RoleBasedAuthorizationFilterFactory extends AbstractGatewayFilterFa
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
+            String token = null;
             
-            // Check if Authorization header exists
-            if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
-                return this.onError(exchange, "Authorization header is missing", HttpStatus.UNAUTHORIZED);
+            // First, try to get token from Authorization header
+            boolean hasAuthHeader = request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION);
+            if (hasAuthHeader) {
+                String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+                
+                // Check if Authorization header has the correct format
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    token = authHeader.substring(7);
+                }
             }
-
-            String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
             
-            // Check if Authorization header has the correct format
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return this.onError(exchange, "Authorization header must start with Bearer", HttpStatus.UNAUTHORIZED);
+            // If no token from header, try to get it from auth_token cookie
+            boolean hasAuthCookie = request.getCookies().containsKey("auth_token");
+            if ((token == null || token.trim().isEmpty()) && hasAuthCookie) {
+                var cookieValues = request.getCookies().get("auth_token");
+                if (cookieValues != null && !cookieValues.isEmpty()) {
+                    token = cookieValues.get(0).getValue();
+                }
             }
-
-            // Extract the token
-            String token = authHeader.substring(7);
+            
+            // If still no token found, return unauthorized
+            if (token == null || token.trim().isEmpty()) {
+                return this.onError(exchange, "Authorization header or auth_token cookie is required", HttpStatus.UNAUTHORIZED);
+            }
+            
+            // Make token final for use in lambda
+            final String finalToken = token;
             
             try {
-                // Validate the token first
-                if (!jwtUtil.validateToken(token)) {
+                // Parse and validate the token in a single operation
+                JwtUtil.TokenInfo tokenInfo = jwtUtil.parseAndValidateToken(finalToken);
+                if (tokenInfo == null) {
                     return this.onError(exchange, "JWT token is not valid", HttpStatus.UNAUTHORIZED);
                 }
                 
-                // Extract user information
-                String username = jwtUtil.getUsernameFromToken(token);
-                String userId = jwtUtil.getUserIdFromToken(token);
-                Role userRole = jwtUtil.getRoleFromToken(token);
-                String firstName = jwtUtil.getFirstNameFromToken(token);
-                String activityStatus = jwtUtil.getActivityStatusFromToken(token);
-                
                 // Check if user is active
-                if (!"TRUE".equalsIgnoreCase(activityStatus)) {
+                if (!"TRUE".equalsIgnoreCase(tokenInfo.getActivityStatus())) {
                     return this.onError(exchange, "User account is not active", HttpStatus.FORBIDDEN);
                 }
                 
                 // Check role-based authorization
-                if (!hasRequiredRole(userRole, config.getAllowedRoles())) {
+                if (!hasRequiredRole(tokenInfo.getRole(), config.getAllowedRoles())) {
                     return this.onError(exchange, 
                         String.format("Access denied. Required roles: %s, User role: %s", 
-                            config.getAllowedRoles(), userRole.getName()), 
+                            config.getAllowedRoles(), tokenInfo.getRole().getName()), 
                         HttpStatus.FORBIDDEN);
                 }
                 
                 // Add user information to request headers for downstream services
-                ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
-                        .header("X-User-Id", userId)
-                        .build();
+                ServerHttpRequest.Builder requestBuilder = request.mutate()
+                        .header("X-User-Id", tokenInfo.getUserId());
+                
+                // Add Authorization header if it doesn't exist (e.g., when token came from cookie)
+                if (!hasAuthHeader) {
+                    requestBuilder.header(HttpHeaders.AUTHORIZATION, "Bearer " + finalToken);
+                }
+                
+                ServerHttpRequest modifiedRequest = requestBuilder.build();
                 
                 return chain.filter(exchange.mutate().request(modifiedRequest).build())
                 .then(Mono.fromRunnable(() -> {
-                    ServerHttpResponse response = exchange.getResponse();
+                    if(!hasAuthCookie)
+                        return;
                     
-                    ResponseCookie cookie = ResponseCookie.from("auth_token", token)
+                    ServerHttpResponse response = exchange.getResponse();
+                    ResponseCookie cookie = ResponseCookie.from("auth_token", finalToken)
                                 .path("/")
                                 .httpOnly(true)
                                 .secure(true)

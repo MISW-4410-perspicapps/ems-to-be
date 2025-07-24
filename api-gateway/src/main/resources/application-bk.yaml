@@ -11,7 +11,7 @@ spring:
           routes:
             # Public routes - no authentication required
             - id: auth-service
-              uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
+              uri: http://localhost:8081
               predicates:
                 - Path=/api/auth/**
                 
@@ -22,7 +22,7 @@ spring:
                 
             # Routes requiring authentication
             - id: ems-legacy
-              uri: ${EMS_LEGACY_URL:http://ems-legacy:8081}
+              uri: http://localhost:8081
               predicates:
                 - Path=/ems/legacy/login
               filters:
@@ -37,38 +37,24 @@ spring:
 # Server configuration
 server:
   port: 8080
-  # Production server configuration
-  netty:
-    connection-timeout: 20s
-    idle-timeout: 60s
-  compression:
-    enabled: true
-    mime-types: application/json,application/xml,text/html,text/xml,text/plain
 
-# JWT Configuration - use environment variables in production
+# JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
-  expiration: ${JWT_EXPIRATION:86400}
+  secret: mySecretKey123456789012345678901234567890
+  expiration: 86400
 
-# Actuator Configuration - restricted in production
+# Actuator Configuration
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
-      base-path: /actuator
+        include: "*"
   endpoint:
     health:
-      show-details: when-authorized
-  security:
-    enabled: true
+      show-details: always
 
 # Logging Configuration
 logging:
   level:
-    org.springframework.cloud.gateway: ${LOG_LEVEL:INFO}
-    com.ems.gateway: ${LOG_LEVEL:INFO}
-    root: WARN
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    org.springframework.cloud.gateway: DEBUG
+    com.ems.gateway: DEBUG

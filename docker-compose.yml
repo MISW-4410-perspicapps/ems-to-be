@@ -1,0 +1,99 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: ${BACKEND_DB_HOST}
+    ports:
+      - "${BACKEND_DB_PORT}:3306"
+    environment:
+      MYSQL_DATABASE: ${BACKEND_DB_NAME}
+      MYSQL_USER: ${BACKEND_USER_NAME}
+      MYSQL_PASSWORD: ${BACKEND_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${BACKEND_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./Backend/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - ems-backend-network
+
+  app:
+    build: ./Backend
+    container_name: ems-backend
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_PORT: ${BACKEND_DB_PORT}
+      DB_NAME: ${BACKEND_DB_NAME}
+      USER_NAME: ${BACKEND_USER_NAME}
+      PASSWORD: ${BACKEND_PASSWORD}
+      DB_CONTAINER_NAME: ${BACKEND_DB_HOST}
+      GCP_BUCKET_NAME: ${GCP_BUCKET_NAME}
+      GOOGLE_APPLICATION_CREDENTIALS: /app/dataGcp.json
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+    restart: on-failure
+    networks:
+      - ems-backend-network
+      - ems-frontend-network
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: ems-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring profiles
+      - SPRING_PROFILES_ACTIVE=docker
+      
+      # JWT Configuration
+      - JWT_SECRET=${JWT_SECRET:-mySecretKey123456789012345678901234567890}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400}
+      
+      # Logging
+      - LOGGING_LEVEL_COM_EMS_GATEWAY=${LOG_LEVEL:-DEBUG}
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_CLOUD_GATEWAY=${LOG_LEVEL:-DEBUG}
+      
+      # JVM Options
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC
+    
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    networks:
+      - ems-frontend-network
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+networks:
+  ems-backend-network:
+    driver: bridge
+    name: ems-backend-network
+    internal: false
+  ems-frontend-network:
+    driver: bridge
+    name: ems-frontend-network
+
+volumes:
+  mysql_data:

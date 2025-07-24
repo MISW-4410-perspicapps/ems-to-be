@@ -10,26 +10,48 @@ spring:
               enabled: true
           routes:
             # Public routes - no authentication required
-            - id: auth-service
-              uri: http://localhost:8081
-              predicates:
-                - Path=/api/auth/**
-                
             - id: gateway-health
               uri: http://localhost:8080
               predicates:
                 - Path=/api/gateway/**
-                
-            # Routes requiring authentication
-            - id: ems-legacy
-              uri: http://localhost:8081
+
+            # Backend health check (public)
+            - id: backend-health
+              uri: ${API_BACKEND_URL:http://ems-backend:8081}
               predicates:
-                - Path=/ems/legacy/login
+                - Path=/api/backend/health
               filters:
-                - RewritePath=/ems/legacy/login, /ems/login
+                - RewritePath=/api/backend/health, /health
+
+            # Authentication routes (public)
+            - id: auth-login
+              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+              predicates:
+                - Path=/api/auth/login
+              filters:
+                - RewritePath=/api/auth/(?<segment>.*), /auth/$\{segment}
+
+            # Authentication validation (requires token)
+            - id: auth-validate
+              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+              predicates:
+                - Path=/api/auth/validateToken
+              filters:
+                - RewritePath=/api/auth/(?<segment>.*), /auth/$\{segment}
                 - name: RoleBasedAuthorizationFilter
                   args:
-                    allowedRoles: ADMIN,MANAGER,EMPLOYEE 
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            # File management routes (requires authentication)
+            - id: file-service
+              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+              predicates:
+                - Path=/api/files/**
+              filters:
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
           discovery:
             locator:
               enabled: false
@@ -37,24 +59,38 @@ spring:
 # Server configuration
 server:
   port: 8080
+  # Production server configuration
+  netty:
+    connection-timeout: 20s
+    idle-timeout: 60s
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
 
-# JWT Configuration
+# JWT Configuration - use environment variables in production
 jwt:
-  secret: mySecretKey123456789012345678901234567890
-  expiration: 86400
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+  expiration: ${JWT_EXPIRATION:86400}
 
-# Actuator Configuration
+# Actuator Configuration - restricted in production
 management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: health,info,metrics
+      base-path: /actuator
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
+  security:
+    enabled: true
 
 # Logging Configuration
 logging:
   level:
-    org.springframework.cloud.gateway: DEBUG
-    com.ems.gateway: DEBUG
+    org.springframework.cloud.gateway: ${LOG_LEVEL:INFO}
+    com.ems.gateway: ${LOG_LEVEL:INFO}
+    root: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -1,4 +1,3 @@
-# Multi-stage Dockerfile for EMS API Gateway
 # Stage 1: Build stage using Maven
 FROM maven:3.9.9-amazoncorretto-17 AS build
 

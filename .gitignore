@@ -1,4 +1,25 @@
-HELP.md
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Docker
+.docker/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build directories
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

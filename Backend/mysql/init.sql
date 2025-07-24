@@ -1,3 +1,10 @@
+-- Use the database created by Docker environment variables
+USE ems_database;
+
+-- Grant all privileges to the user on this database
+GRANT ALL PRIVILEGES ON ems_database.* TO 'ems_user'@'%';
+FLUSH PRIVILEGES;
+
 create table ate
 (
     id          int auto_increment

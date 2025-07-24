@@ -18,12 +18,12 @@ import java.util.Arrays;
 import java.util.List;
 
 @Component
-public class RoleBasedAuthorizationFilterFactory extends AbstractGatewayFilterFactory<RoleBasedAuthorizationFilterFactory.Config> {
+public class RoleBasedAuthorizationFilter extends AbstractGatewayFilterFactory<RoleBasedAuthorizationFilter.Config> {
 
     @Autowired
     private JwtUtil jwtUtil;
 
-    public RoleBasedAuthorizationFilterFactory() {
+    public RoleBasedAuthorizationFilter() {
         super(Config.class);
     }
 
@@ -77,7 +77,7 @@ public class RoleBasedAuthorizationFilterFactory extends AbstractGatewayFilterFa
                 if (!hasRequiredRole(tokenInfo.getRole(), config.getAllowedRoles())) {
                     return this.onError(exchange, 
                         String.format("Access denied. Required roles: %s, User role: %s", 
-                            config.getAllowedRoles(), tokenInfo.getRole().getName()), 
+                            config.getAllowedRoles(), tokenInfo.getRole()), 
                         HttpStatus.FORBIDDEN);
                 }
                 
@@ -94,7 +94,7 @@ public class RoleBasedAuthorizationFilterFactory extends AbstractGatewayFilterFa
                 
                 return chain.filter(exchange.mutate().request(modifiedRequest).build())
                 .then(Mono.fromRunnable(() -> {
-                    if(!hasAuthCookie)
+                    if(hasAuthCookie)
                         return;
                     
                     ServerHttpResponse response = exchange.getResponse();

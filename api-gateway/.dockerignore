@@ -1,0 +1,42 @@
+# Docker ignore file for EMS API Gateway
+
+# Maven
+target/
+!target/gateway-*.jar
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+
+# Documentation
+README.md
+HELP.md
+RBAC_DOCUMENTATION.md
+demo-rbac.sh
+
+# Test files
+src/test/
+
+# Other
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

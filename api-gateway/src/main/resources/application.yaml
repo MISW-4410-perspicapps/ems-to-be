@@ -17,7 +17,7 @@ spring:
 
             # Backend health check (public)
             - id: backend-health
-              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+              uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
                 - Path=/api/backend/health
               filters:
@@ -25,7 +25,7 @@ spring:
 
             # Authentication routes (public)
             - id: backend-auth
-              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+              uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
                 - Path=/api/auth/login
               filters:
@@ -33,18 +33,18 @@ spring:
 
             # Backend health check
             - id: legacy-dashboard
-              uri: ${API_BACKEND_URL:http://ems-legacy:8082}
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
               predicates:
                 - Path=/api/legacy/dashboard
               filters:
-                - RewritePath=/api/legacy/dashboard, /login
+                - RewritePath=/api/legacy/dashboard, /ems/login
                 - name: RoleBasedAuthorizationFilter
                   args:
                     allowedRoles: ADMIN,MANAGER,EMPLOYEE,NA
 
             # Authentication validation (requires token)
             - id: auth-validate
-              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+              uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
                 - Path=/api/auth/validateToken
               filters:
@@ -55,7 +55,7 @@ spring:
 
             # File management routes (requires authentication)
             - id: file-service
-              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+              uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
                 - Path=/api/files/**
               filters:

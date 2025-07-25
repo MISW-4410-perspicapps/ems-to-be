@@ -35,11 +35,15 @@ services:
       - ems_legacy_data:/var/lib/mysql
       # Opcional: montar scripts SQL si existen
       - ./legacy/EMS-Database/new-database:/docker-entrypoint-initdb.d
-    command: --default-authentication-plugin=mysql_native_password --sql-mode=""
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
     networks:
       - ems-legacy-network
 
-  ems-backend-app:
+  ems-backend:
     build: ./Backend
     container_name: ems-backend
     ports:
@@ -62,12 +66,12 @@ services:
       - ems-backend-network
       - ems-frontend-network
 
-  ems-legacy-app:
+  ems-legacy:
     build: ./legacy
     container_name: ems-legacy
     restart: always
     ports:
-      - "8082:8082"
+      - "8082:${EMS_LEGACY_APP_PORT_HOST}"
     depends_on:
       legacy-mysql:
         condition: service_healthy
@@ -77,6 +81,7 @@ services:
       - DB_NAME=${LEGACY_DB_NAME}
       - DB_USER=${LEGACY_USER_NAME}
       - DB_PASSWORD=${LEGACY_PASSWORD}
+      - APP_PORT=${EMS_LEGACY_APP_PORT_HOST}
     networks:
       - ems-legacy-network
       - ems-frontend-network
@@ -135,6 +140,9 @@ networks:
   ems-frontend-network:
     driver: bridge
     name: ems-frontend-network
+  ems-legacy-network:
+    driver: bridge
+    name: ems-legacy-network
 
 volumes:
   ems_backend_db:

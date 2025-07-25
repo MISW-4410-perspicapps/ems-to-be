@@ -83,12 +83,7 @@ public class RoleBasedAuthorizationFilter extends AbstractGatewayFilterFactory<R
                 
                 // Add user information to request headers for downstream services
                 ServerHttpRequest.Builder requestBuilder = request.mutate()
-                        .header("X-User-Id", tokenInfo.getUserId());
-                
-                // Add Authorization header if it doesn't exist (e.g., when token came from cookie)
-                if (!hasAuthHeader) {
-                    requestBuilder.header(HttpHeaders.AUTHORIZATION, "Bearer " + finalToken);
-                }
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + finalToken);
                 
                 ServerHttpRequest modifiedRequest = requestBuilder.build();
                 

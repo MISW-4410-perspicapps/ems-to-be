@@ -4,7 +4,6 @@
  */
 package com.EMS.controller.filter;
 
-import com.EMS.service.EmployeeService;
 import com.EMS.utility.FunctionResponse;
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -28,15 +27,19 @@ public class AuthFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse res = (HttpServletResponse) response;
         String authHeader = req.getHeader("Authorization");
-        res.setHeader("Authorization", authHeader);
-        System.out.println("AuthHeader es "+authHeader);        
-
-        /*if (authHeader == null) {
+        res.setHeader("Authorization", authHeader);                   
+        if (authHeader == null) {         
+            System.out.println("SACA TOKEN DE SESSION#1 ");
             Object tokenFromSession = req.getSession().getAttribute("token");
+            System.out.println("SACA TOKEN DE SESSION#2 " +tokenFromSession);
             if (tokenFromSession != null) {
                 authHeader = tokenFromSession.toString();
-            }
-        }*/
+            }            
+        }else{
+            req.getSession().setAttribute("token",authHeader);
+            System.out.println("SETEA TOKEN EN SESION");
+        }
+        System.out.println("AuthHeader es "+authHeader);     
         String uri = req.getRequestURI();
         String url = req.getRequestURL().toString();
         String servletPath = req.getServletPath();
@@ -45,60 +48,51 @@ public class AuthFilter implements Filter {
         System.out.println(" - Full URL: " + url);
         System.out.println(" - Servlet Path: " + servletPath);
         System.out.println("Entrra al Filtro authHeader " + authHeader);
+        
+        // Allow access to login page and login controller without token
+        //if (servletPath.equals("/login") || servletPath.equals("/login.jsp") || 
+        //    servletPath.equals("/register") || servletPath.equals("/register.jsp")) {
+        //    chain.doFilter(request, response);
+        //    return;
+        //}
+        
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
                 com.EMS.utility.FunctionResponse fresponse = leerToken(authHeader);
-                if (servletPath.endsWith("jsp")) {
-                    if (fresponse.getStatus()) {
-                        HttpSession session = req.getSession();
-                        session.setAttribute("token", authHeader);
-                        //session.setAttribute("password", password);
-                        session.setAttribute("firstname", fresponse.getResponse());
-                        session.setAttribute("role", fresponse.getRole());
-                        session.setAttribute("userId", fresponse.getEmployeeId());
-                        String activityStatus = "FALSE";
-                        if (fresponse.getActivityStatus()) {
-                            activityStatus = "TRUE";
-                        } else {
-                            activityStatus = "FALSE";
-                        }
-                        session.setAttribute("activityStatus", activityStatus);
-                        com.EMS.entity.Registration register = EmployeeService.getUserDetails(fresponse.getEmployeeId());
-                        if (fresponse.getRole() == 1) {
-                            request.setAttribute("register", register);
-                            System.out.println("Redirige A");
-                            RequestDispatcher rs = request.getRequestDispatcher("adminDashboard.jsp");
-                            rs.forward(request, response);
-                            return;
-                        } else if (fresponse.getRole() == 2) {
-                            System.out.println("Redirige B");
-                            request.setAttribute("register", register);
-                            RequestDispatcher rs = request.getRequestDispatcher("managerDashboard.jsp");
-                            rs.forward(request, response);
-                            return;
-                        } else {
-                            System.out.println("Redirige C");
-                            request.setAttribute("register", register);
-                            RequestDispatcher rs = request.getRequestDispatcher("employeeDashboard.jsp");
-                            rs.forward(request, response);
-                            return;
-                        }
+                if (fresponse.getStatus()) {
+                    HttpSession session = req.getSession();
+                    session.setAttribute("token", authHeader);
+                    //session.setAttribute("password", password);
+                    session.setAttribute("firstname", fresponse.getResponse());
+                    session.setAttribute("role", fresponse.getRole());
+                    session.setAttribute("userId", fresponse.getEmployeeId());
+                    String activityStatus = "FALSE";
+                    if (fresponse.getActivityStatus()) {
+                        activityStatus = "TRUE";
                     } else {
-                        System.out.println("Ocurrio un error");
-                        request.setAttribute("loginerror", fresponse.getResponse());
-                        RequestDispatcher rs = request.getRequestDispatcher("login.jsp");
-                        rs.forward(request, response);
-                        return;
+                        activityStatus = "FALSE";
                     }
-                } else {
+                    session.setAttribute("activityStatus", activityStatus);
+                    // Continue processing the request instead of forwarding immediately
                     chain.doFilter(request, response);
+                    return;
+                } else {
+                    System.out.println("Ocurrio un error");
+                    request.setAttribute("loginerror", fresponse.getResponse());
+                    RequestDispatcher rs = request.getRequestDispatcher("login.jsp");
+                    rs.forward(request, response);
                     return;
                 }
             } catch (Exception ex) {
                 System.out.println("Error " + ex.getMessage());
+                // Redirect to login on error
+                res.sendRedirect("login.jsp");
+                return;
             }
         }
-        res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o ausente.");
+        
+        // If no token, redirect to login instead of sending 401
+        res.sendRedirect("login.jsp");
     }
 
     private com.EMS.utility.FunctionResponse leerToken(String token) {

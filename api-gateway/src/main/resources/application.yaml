@@ -10,7 +10,7 @@ spring:
               enabled: true
           routes:
             # Public routes - no authentication required
-            - id: gateway-health
+            - id: gateway-public
               uri: http://localhost:8080
               predicates:
                 - Path=/api/gateway/**
@@ -24,12 +24,23 @@ spring:
                 - RewritePath=/api/backend/health, /health
 
             # Authentication routes (public)
-            - id: auth-login
+            - id: backend-auth
               uri: ${API_BACKEND_URL:http://ems-backend:8081}
               predicates:
                 - Path=/api/auth/login
               filters:
                 - RewritePath=/api/auth/(?<segment>.*), /auth/$\{segment}
+
+            # Backend health check
+            - id: legacy-dashboard
+              uri: ${API_BACKEND_URL:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/dashboard
+              filters:
+                - RewritePath=/api/legacy/dashboard, /login
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE,NA
 
             # Authentication validation (requires token)
             - id: auth-validate

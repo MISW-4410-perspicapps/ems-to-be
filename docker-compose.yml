@@ -1,16 +1,16 @@
 services:
-  mysql:
-    image: mysql:8
+  backend-mysql:
+    image: mysql:8.0
     container_name: ${BACKEND_DB_HOST}
     ports:
-      - "${BACKEND_DB_PORT}:3306"
+      - "${BACKEND_DB_PORT_OUT}:${BACKEND_DB_PORT_HOST}"
     environment:
       MYSQL_DATABASE: ${BACKEND_DB_NAME}
       MYSQL_USER: ${BACKEND_USER_NAME}
       MYSQL_PASSWORD: ${BACKEND_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${BACKEND_PASSWORD}
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ems_backend_db:/var/lib/mysql
       - ./Backend/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -20,16 +20,35 @@ services:
     networks:
       - ems-backend-network
 
-  app:
+  legacy-mysql:
+    image: mysql:8.0
+    container_name: ${LEGACY_DB_HOST}
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${LEGACY_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${LEGACY_DB_NAME}
+      MYSQL_USER: ${LEGACY_USER_NAME}
+      MYSQL_PASSWORD: ${LEGACY_PASSWORD}
+    ports:
+      - "${LEGACY_DB_PORT_OUT}:${LEGACY_DB_PORT_HOST}"
+    volumes:
+      - ems_legacy_data:/var/lib/mysql
+      # Opcional: montar scripts SQL si existen
+      - ./legacy/EMS-Database/new-database:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --sql-mode=""
+    networks:
+      - ems-legacy-network
+
+  ems-backend-app:
     build: ./Backend
     container_name: ems-backend
     ports:
       - "8081:8081"
     depends_on:
-      mysql:
+      backend-mysql:
         condition: service_healthy
     environment:
-      DB_PORT: ${BACKEND_DB_PORT}
+      DB_PORT: ${BACKEND_DB_PORT_HOST}
       DB_NAME: ${BACKEND_DB_NAME}
       USER_NAME: ${BACKEND_USER_NAME}
       PASSWORD: ${BACKEND_PASSWORD}
@@ -42,6 +61,28 @@ services:
     networks:
       - ems-backend-network
       - ems-frontend-network
+
+  ems-legacy-app:
+    build: ./legacy
+    container_name: ems-legacy
+    restart: always
+    ports:
+      - "8082:8082"
+    depends_on:
+      legacy-mysql:
+        condition: service_healthy
+    environment:
+      - DB_HOST=${LEGACY_DB_HOST}
+      - DB_PORT=${LEGACY_DB_PORT_HOST}
+      - DB_NAME=${LEGACY_DB_NAME}
+      - DB_USER=${LEGACY_USER_NAME}
+      - DB_PASSWORD=${LEGACY_PASSWORD}
+    networks:
+      - ems-legacy-network
+      - ems-frontend-network
+      - ems-backend-network
+    volumes:
+      - ems_legacy_logs:/usr/local/tomcat/logs
 
   api-gateway:
     build: ./api-gateway
@@ -96,4 +137,6 @@ networks:
     name: ems-frontend-network
 
 volumes:
-  mysql_data:
+  ems_backend_db:
+  ems_legacy_data:
+  ems_legacy_logs:

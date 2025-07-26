@@ -59,6 +59,22 @@ spring:
                     maxAge: PT24H
                     path: /
 
+            # Static resources - JavaScript files ending with .js
+            - id: legacy-static-js
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/**.js
+              filters:
+                - RewritePath=/api/legacy/(?<path>.*), /ems/$\{path}
+
+            # Static resources - CSS files ending with .css
+            - id: legacy-static-css
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/**.css
+              filters:
+                - RewritePath=/api/legacy/(?<path>.*), /ems/$\{path}
+
             # Legacy dashboard path
             - id: legacy-dashboard
               uri: ${URL_LEGACY:http://ems-legacy:8082}
@@ -70,16 +86,199 @@ spring:
                   args:
                     allowedRoles: ADMIN,MANAGER,EMPLOYEE,NA
 
-            # Another legacy paths
-            - id: legacy-dashboard
+            # Admin-only routes
+            - id: legacy-admin-active-users
               uri: ${URL_LEGACY:http://ems-legacy:8082}
               predicates:
-                - Path=/api/legacy/**
+                - Path=/api/legacy/ActiveUsers
               filters:
-                - RewritePath=/api/legacy/(?<segment>.*), /ems/$\{segment}
+                - RewritePath=/api/legacy/ActiveUsers, /ems/ActiveUsers
                 - name: RoleBasedAuthorizationFilter
                   args:
-                    allowedRoles: ADMIN,MANAGER,EMPLOYEE,NA
+                    allowedRoles: ADMIN
+
+            - id: legacy-admin-inactive-users
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/InactiveUsers
+              filters:
+                - RewritePath=/api/legacy/InactiveUsers, /ems/InactiveUsers
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN
+
+            - id: legacy-admin-run-payroll
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/RunPayroll
+              filters:
+                - RewritePath=/api/legacy/RunPayroll, /ems/RunPayroll
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN
+
+            - id: legacy-admin-organization-profiles
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/OrganizationProfiles
+              filters:
+                - RewritePath=/api/legacy/OrganizationProfiles, /ems/OrganizationProfiles
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN
+
+            # Manager-only routes
+            - id: legacy-manager-directories
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Directories
+              filters:
+                - RewritePath=/api/legacy/Directories, /ems/Directories
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-supervised-users
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/SupervisedUsers
+              filters:
+                - RewritePath=/api/legacy/SupervisedUsers, /ems/SupervisedUsers
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-subdirectories
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/ManagerDirectories
+              filters:
+                - RewritePath=/api/legacy/ManagerDirectories, /ems/ManagerDirectories
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-bonus
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Bonus
+              filters:
+                - RewritePath=/api/legacy/Bonus, /ems/Bonus
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-leaves-response
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/LeavesResponse
+              filters:
+                - RewritePath=/api/legacy/LeavesResponse, /ems/LeavesResponse
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-update-ate
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/updateATE
+              filters:
+                - RewritePath=/api/legacy/updateATE, /ems/updateATE
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-update-permission
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/updatePermission
+              filters:
+                - RewritePath=/api/legacy/updatePermission, /ems/updatePermission
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            # Employee routes (accessible by all authenticated users)
+            - id: legacy-employee-leaves
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Leaves
+              filters:
+                - RewritePath=/api/legacy/Leaves, /ems/Leaves
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-profiles
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Profiles
+              filters:
+                - RewritePath=/api/legacy/Profiles, /ems/Profiles
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-payments
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Payments
+              filters:
+                - RewritePath=/api/legacy/Payments, /ems/Payments
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-ate
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/ATE
+              filters:
+                - RewritePath=/api/legacy/ATE, /ems/ATE
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-upload-docs
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/UploadDocs
+              filters:
+                - RewritePath=/api/legacy/UploadDocs, /ems/UploadDocs
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-download-doc
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/DownloadDoc
+              filters:
+                - RewritePath=/api/legacy/DownloadDoc, /ems/DownloadDoc
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-update-profile
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/updateProfile
+              filters:
+                - RewritePath=/api/legacy/updateProfile, /ems/updateProfile
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            # Dashboard and Role routes (accessible by all authenticated users)
+            - id: legacy-role
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Role
+              filters:
+                - RewritePath=/api/legacy/Role, /ems/Role
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
 
             # File management routes (requires authentication)
             - id: file-service

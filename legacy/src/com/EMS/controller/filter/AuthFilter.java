@@ -56,6 +56,15 @@ public class AuthFilter implements Filter {
         //    return;
         //}
         
+        // Allow access to static resources (CSS, JS, images) without authentication
+        if (servletPath.endsWith(".css") || servletPath.endsWith(".js") || 
+            servletPath.endsWith(".png") || servletPath.endsWith(".jpg") || 
+            servletPath.endsWith(".jpeg") || servletPath.endsWith(".gif") || 
+            servletPath.endsWith(".ico") || servletPath.endsWith(".svg")) {
+            chain.doFilter(request, response);
+            return;
+        }
+        
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
                 com.EMS.utility.FunctionResponse fresponse = leerToken(authHeader);

@@ -5,11 +5,31 @@ spring:
     gateway:
       server:
         webflux:
-          filter:
-            secure-headers:
-              enabled: true
+          #filter:
+          #  secure-headers:
+          #    enabled: true
+          # Configure CORS globally
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns:
+                  - "http://localhost:*"
+                  - "http://localhost"
+                  - "http://127.0.0.1:*"
+                  - "http://127.0.0.1"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - OPTIONS
+                  - PATCH
+                allowedHeaders: '*'
+                allowCredentials: true
+                maxAge: 3600
+          # Configure routes
           routes:
-            # Public routes - no authentication required
+            # Public routes - gateway health endpoints
             - id: gateway-public
               uri: http://localhost:8080
               predicates:
@@ -23,15 +43,23 @@ spring:
               filters:
                 - RewritePath=/api/backend/health, /health
 
-            # Authentication routes (public)
+            # Authentication routes (public) - route to backend
             - id: backend-auth
               uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
-                - Path=/api/auth/login
+                - Path=/api/auth/**
               filters:
                 - RewritePath=/api/auth/(?<segment>.*), /auth/$\{segment}
+                - name: AuthTokenCookieFilter
+                  args:
+                    cookieName: auth_token
+                    httpOnly: true
+                    secure: false
+                    sameSite: Strict
+                    maxAge: PT24H
+                    path: /
 
-            # Backend health check
+            # Legacy dashboard path
             - id: legacy-dashboard
               uri: ${URL_LEGACY:http://ems-legacy:8082}
               predicates:
@@ -42,16 +70,16 @@ spring:
                   args:
                     allowedRoles: ADMIN,MANAGER,EMPLOYEE,NA
 
-            # Authentication validation (requires token)
-            - id: auth-validate
-              uri: ${URL_BACKEND:http://ems-backend:8081}
+            # Another legacy paths
+            - id: legacy-dashboard
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
               predicates:
-                - Path=/api/auth/validateToken
+                - Path=/api/legacy/**
               filters:
-                - RewritePath=/api/auth/(?<segment>.*), /auth/$\{segment}
+                - RewritePath=/api/legacy/(?<segment>.*), /ems/$\{segment}
                 - name: RoleBasedAuthorizationFilter
                   args:
-                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE,NA
 
             # File management routes (requires authentication)
             - id: file-service
@@ -93,15 +121,15 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-  security:
-    enabled: true
 
 # Logging Configuration
 logging:
   level:
-    org.springframework.cloud.gateway: ${LOG_LEVEL:INFO}
-    com.ems.gateway: ${LOG_LEVEL:INFO}
+    '[com.ems.gateway.filter.RequestLoggingFilter]': INFO
+    '[com.ems.gateway.filter.AuthTokenCookieFilter]': INFO
+    '[org.springframework.web.server.adapter.HttpWebHandlerAdapter]': WARN
+    '[reactor.netty]': WARN
     root: WARN
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level - %msg%n"

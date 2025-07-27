@@ -40,21 +40,12 @@ public class AuthFilter implements Filter {
             System.out.println("SETEA TOKEN EN SESION");
         }
         System.out.println("AuthHeader es "+authHeader);     
-        String uri = req.getRequestURI();
         String url = req.getRequestURL().toString();
         String servletPath = req.getServletPath();
         System.out.println("INTENTA ACCEDER A:");
-        System.out.println(" - URI: " + uri);
         System.out.println(" - Full URL: " + url);
         System.out.println(" - Servlet Path: " + servletPath);
         System.out.println("Entrra al Filtro authHeader " + authHeader);
-        
-        // Allow access to login page and login controller without token
-        //if (servletPath.equals("/login") || servletPath.equals("/login.jsp") || 
-        //    servletPath.equals("/register") || servletPath.equals("/register.jsp")) {
-        //    chain.doFilter(request, response);
-        //    return;
-        //}
         
         // Allow access to static resources (CSS, JS, images) without authentication
         if (servletPath.endsWith(".css") || servletPath.endsWith(".js") || 

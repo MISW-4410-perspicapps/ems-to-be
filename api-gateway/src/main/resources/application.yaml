@@ -58,6 +58,16 @@ spring:
                     maxAge: PT24H
                     path: /
 
+            # Backend health check (public)
+            - id: backend-health
+              uri: ${URL_BACKEND:http://ems-backend:8081}
+              predicates:
+                - Path=/api/files/upload
+              filters:
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+  
             # Static resources - JavaScript files ending with .js
             - id: legacy-static-js
               uri: ${URL_LEGACY:http://ems-legacy:8082}

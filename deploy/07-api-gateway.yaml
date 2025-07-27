@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ems-api-gateway
+  namespace: ems
+  labels:
+    app: ems-api-gateway
+    tier: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ems-api-gateway
+  template:
+    metadata:
+      labels:
+        app: ems-api-gateway
+        tier: gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: ems-api-gateway:latest
+        imagePullPolicy: Never  # For local development
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "docker"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ems-secrets
+              key: jwt-secret
+        - name: JWT_EXPIRATION
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: JWT_EXPIRATION
+        - name: LOGGING_LEVEL_COM_EMS_GATEWAY
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: LOG_LEVEL
+        - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_CLOUD_GATEWAY
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: LOG_LEVEL
+        - name: JAVA_OPTS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ems-api-gateway
+  namespace: ems
+  labels:
+    app: ems-api-gateway
+    tier: gateway
+spec:
+  selector:
+    app: ems-api-gateway
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  type: LoadBalancer  # Expose externally

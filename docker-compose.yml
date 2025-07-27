@@ -71,7 +71,7 @@ services:
     container_name: ems-legacy
     restart: always
     ports:
-      - "8082:${EMS_LEGACY_APP_PORT_HOST}"
+      - "8082:8082"
     depends_on:
       legacy-mysql:
         condition: service_healthy
@@ -81,7 +81,8 @@ services:
       - DB_NAME=${LEGACY_DB_NAME}
       - DB_USER=${LEGACY_USER_NAME}
       - DB_PASSWORD=${LEGACY_PASSWORD}
-      - APP_PORT=${EMS_LEGACY_APP_PORT_HOST}
+      - APP_PORT=8082
+      - URL_API=${URL_BACKEND}/api/files/upload
     networks:
       - ems-legacy-network
       - ems-frontend-network

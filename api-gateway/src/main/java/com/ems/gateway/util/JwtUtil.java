@@ -67,6 +67,13 @@ public class JwtUtil {
             System.err.println("JWT claims string is empty: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("JWT token validation failed: " + e.getMessage());
+            // Print token details for debugging (don't do this in production)
+            try {
+                Claims claims = getAllClaimsFromToken(token);
+                System.err.println("JWT token claims: " + claims);
+            } catch (Exception ex) {
+                // Ignore, just for debugging
+            }
         }
         return null; // Invalid token
     }

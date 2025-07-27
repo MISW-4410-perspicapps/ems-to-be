@@ -36,8 +36,8 @@ public class JwtService {
     public String generateToken(Registration registration) {
         return Jwts.builder()
                 .claim("firstname", registration.getFirstname())
-                .claim("role", registration.getRole())
-                .claim("userId", registration.getId())
+                .claim("role", registration.getRole() != null ? String.valueOf(registration.getRole().getId()) : "4")
+                .claim("userId", registration.getId() != null ? String.valueOf(registration.getId()) : "")
                 .claim("activityStatus", registration.getActivityStatus() != null && registration.getActivityStatus() ? "TRUE" : "FALSE")
                 .claim("username", registration.getUsername())
                 .setSubject(registration.getUsername())

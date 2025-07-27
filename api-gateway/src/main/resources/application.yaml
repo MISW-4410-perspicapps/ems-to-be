@@ -27,14 +27,13 @@ spring:
                 allowedHeaders: '*'
                 allowCredentials: true
                 maxAge: 3600
-          # Configure routes
           routes:
             # Public routes - gateway health endpoints
             - id: gateway-public
               uri: http://localhost:8080
               predicates:
                 - Path=/api/gateway/**
-
+            
             # Backend health check (public)
             - id: backend-health
               uri: ${URL_BACKEND:http://ems-backend:8081}
@@ -42,8 +41,8 @@ spring:
                 - Path=/api/backend/health
               filters:
                 - RewritePath=/api/backend/health, /health
-
-            # Authentication routes (public) - route to backend
+            
+            # Authentication routes (public)
             - id: backend-auth
               uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
@@ -66,7 +65,7 @@ spring:
                 - Path=/api/legacy/**.js
               filters:
                 - RewritePath=/api/legacy/(?<path>.*), /ems/$\{path}
-
+            
             # Static resources - CSS files ending with .css
             - id: legacy-static-css
               uri: ${URL_LEGACY:http://ems-legacy:8082}
@@ -75,7 +74,7 @@ spring:
               filters:
                 - RewritePath=/api/legacy/(?<path>.*), /ems/$\{path}
 
-            # Legacy dashboard path
+            # Legacy dashboard
             - id: legacy-dashboard
               uri: ${URL_LEGACY:http://ems-legacy:8082}
               predicates:
@@ -308,7 +307,6 @@ server:
 # JWT Configuration - use environment variables in production
 jwt:
   secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
-  expiration: ${JWT_EXPIRATION:86400}
 
 # Actuator Configuration - restricted in production
 management:

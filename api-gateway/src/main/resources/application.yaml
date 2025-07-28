@@ -5,46 +5,293 @@ spring:
     gateway:
       server:
         webflux:
-          filter:
-            secure-headers:
-              enabled: true
+          #filter:
+          #  secure-headers:
+          #    enabled: true
+          # Configure CORS globally
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns:
+                  - "http://localhost:*"
+                  - "http://localhost"
+                  - "http://127.0.0.1:*"
+                  - "http://127.0.0.1"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - OPTIONS
+                  - PATCH
+                allowedHeaders: '*'
+                allowCredentials: true
+                maxAge: 3600
           routes:
-            # Public routes - no authentication required
-            - id: gateway-health
+            # Public routes - gateway health endpoints
+            - id: gateway-public
               uri: http://localhost:8080
               predicates:
                 - Path=/api/gateway/**
-
+            
             # Backend health check (public)
             - id: backend-health
-              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+              uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
                 - Path=/api/backend/health
               filters:
                 - RewritePath=/api/backend/health, /health
-
+            
             # Authentication routes (public)
-            - id: auth-login
-              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+            - id: backend-auth
+              uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
-                - Path=/api/auth/login
+                - Path=/api/auth/**
               filters:
                 - RewritePath=/api/auth/(?<segment>.*), /auth/$\{segment}
+                - name: AuthTokenCookieFilter
+                  args:
+                    cookieName: auth_token
+                    httpOnly: true
+                    secure: false
+                    sameSite: Strict
+                    maxAge: PT24H
+                    path: /
 
-            # Authentication validation (requires token)
-            - id: auth-validate
-              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+            # Backend health check (public)
+            - id: backend-health
+              uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
-                - Path=/api/auth/validateToken
+                - Path=/api/files/upload
               filters:
-                - RewritePath=/api/auth/(?<segment>.*), /auth/$\{segment}
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+  
+            # Static resources - JavaScript files ending with .js
+            - id: legacy-static-js
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/**.js
+              filters:
+                - RewritePath=/api/legacy/(?<path>.*), /ems/$\{path}
+            
+            # Static resources - CSS files ending with .css
+            - id: legacy-static-css
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/**.css
+              filters:
+                - RewritePath=/api/legacy/(?<path>.*), /ems/$\{path}
+
+            # Legacy dashboard
+            - id: legacy-dashboard
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/dashboard
+              filters:
+                - RewritePath=/api/legacy/dashboard, /ems/login
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE,NA
+
+            # Admin-only routes
+            - id: legacy-admin-active-users
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/ActiveUsers
+              filters:
+                - RewritePath=/api/legacy/ActiveUsers, /ems/ActiveUsers
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN
+
+            - id: legacy-admin-inactive-users
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/InactiveUsers
+              filters:
+                - RewritePath=/api/legacy/InactiveUsers, /ems/InactiveUsers
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN
+
+            - id: legacy-admin-run-payroll
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/RunPayroll
+              filters:
+                - RewritePath=/api/legacy/RunPayroll, /ems/RunPayroll
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN
+
+            - id: legacy-admin-organization-profiles
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/OrganizationProfiles
+              filters:
+                - RewritePath=/api/legacy/OrganizationProfiles, /ems/OrganizationProfiles
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN
+
+            # Manager-only routes
+            - id: legacy-manager-directories
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Directories
+              filters:
+                - RewritePath=/api/legacy/Directories, /ems/Directories
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-supervised-users
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/SupervisedUsers
+              filters:
+                - RewritePath=/api/legacy/SupervisedUsers, /ems/SupervisedUsers
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-subdirectories
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/ManagerDirectories
+              filters:
+                - RewritePath=/api/legacy/ManagerDirectories, /ems/ManagerDirectories
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-bonus
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Bonus
+              filters:
+                - RewritePath=/api/legacy/Bonus, /ems/Bonus
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-leaves-response
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/LeavesResponse
+              filters:
+                - RewritePath=/api/legacy/LeavesResponse, /ems/LeavesResponse
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-update-ate
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/updateATE
+              filters:
+                - RewritePath=/api/legacy/updateATE, /ems/updateATE
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            - id: legacy-manager-update-permission
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/updatePermission
+              filters:
+                - RewritePath=/api/legacy/updatePermission, /ems/updatePermission
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER
+
+            # Employee routes (accessible by all authenticated users)
+            - id: legacy-employee-leaves
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Leaves
+              filters:
+                - RewritePath=/api/legacy/Leaves, /ems/Leaves
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-profiles
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Profiles
+              filters:
+                - RewritePath=/api/legacy/Profiles, /ems/Profiles
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-payments
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Payments
+              filters:
+                - RewritePath=/api/legacy/Payments, /ems/Payments
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-ate
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/ATE
+              filters:
+                - RewritePath=/api/legacy/ATE, /ems/ATE
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-upload-docs
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/UploadDocs
+              filters:
+                - RewritePath=/api/legacy/UploadDocs, /ems/UploadDocs
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-download-doc
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/DownloadDoc
+              filters:
+                - RewritePath=/api/legacy/DownloadDoc, /ems/DownloadDoc
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            - id: legacy-employee-update-profile
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/updateProfile
+              filters:
+                - RewritePath=/api/legacy/updateProfile, /ems/updateProfile
+                - name: RoleBasedAuthorizationFilter
+                  args:
+                    allowedRoles: ADMIN,MANAGER,EMPLOYEE
+
+            # Dashboard and Role routes (accessible by all authenticated users)
+            - id: legacy-role
+              uri: ${URL_LEGACY:http://ems-legacy:8082}
+              predicates:
+                - Path=/api/legacy/Role
+              filters:
+                - RewritePath=/api/legacy/Role, /ems/Role
                 - name: RoleBasedAuthorizationFilter
                   args:
                     allowedRoles: ADMIN,MANAGER,EMPLOYEE
 
             # File management routes (requires authentication)
             - id: file-service
-              uri: ${API_BACKEND_URL:http://ems-backend:8081}
+              uri: ${URL_BACKEND:http://ems-backend:8081}
               predicates:
                 - Path=/api/files/**
               filters:
@@ -70,7 +317,6 @@ server:
 # JWT Configuration - use environment variables in production
 jwt:
   secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
-  expiration: ${JWT_EXPIRATION:86400}
 
 # Actuator Configuration - restricted in production
 management:
@@ -82,15 +328,15 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-  security:
-    enabled: true
 
 # Logging Configuration
 logging:
   level:
-    org.springframework.cloud.gateway: ${LOG_LEVEL:INFO}
-    com.ems.gateway: ${LOG_LEVEL:INFO}
+    '[com.ems.gateway.filter.RequestLoggingFilter]': INFO
+    '[com.ems.gateway.filter.AuthTokenCookieFilter]': INFO
+    '[org.springframework.web.server.adapter.HttpWebHandlerAdapter]': WARN
+    '[reactor.netty]': WARN
     root: WARN
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level - %msg%n"

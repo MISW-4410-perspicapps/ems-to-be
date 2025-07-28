@@ -1,0 +1,66 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ems-ingress
+  namespace: ems
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: ems.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: ems-api-gateway
+            port:
+              number: 8080
+      - path: /backend
+        pathType: Prefix
+        backend:
+          service:
+            name: ems-backend
+            port:
+              number: 8081
+      - path: /legacy
+        pathType: Prefix
+        backend:
+          service:
+            name: ems-legacy
+            port:
+              number: 8082
+  - host: api-gateway.ems.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ems-api-gateway
+            port:
+              number: 8080
+  - host: backend.ems.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ems-backend
+            port:
+              number: 8081
+  - host: legacy.ems.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ems-legacy
+            port:
+              number: 8082

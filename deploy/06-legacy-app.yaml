@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ems-legacy
+  namespace: ems
+  labels:
+    app: ems-legacy
+    tier: legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ems-legacy
+  template:
+    metadata:
+      labels:
+        app: ems-legacy
+        tier: legacy
+    spec:
+      containers:
+      - name: ems-legacy
+        image: us-central1-docker.pkg.dev/the-text-466701-k2/gae-standard/legacy:v1.0.2
+        ports:
+        - containerPort: 8082
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: LEGACY_DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: LEGACY_DB_PORT_HOST
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: LEGACY_DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: LEGACY_USER_NAME
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ems-secrets
+              key: legacy-db-password
+        - name: APP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: EMS_LEGACY_APP_PORT_HOST
+        volumeMounts:
+        - name: tomcat-logs
+          mountPath: /usr/local/tomcat/logs
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: tomcat-logs
+        persistentVolumeClaim:
+          claimName: ems-legacy-logs-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ems-legacy
+  namespace: ems
+  labels:
+    app: ems-legacy
+    tier: legacy
+spec:
+  selector:
+    app: ems-legacy
+  ports:
+  - port: 8082
+    targetPort: 8082
+    protocol: TCP
+  type: ClusterIP

@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ems-backend
+  namespace: ems
+  labels:
+    app: ems-backend
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ems-backend
+  template:
+    metadata:
+      labels:
+        app: ems-backend
+        tier: backend
+    spec:
+      containers:
+      - name: ems-backend
+        image: us-central1-docker.pkg.dev/the-text-466701-k2/gae-standard/backend:v1.0.3
+        ports:
+        - containerPort: 8081
+        env:
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: BACKEND_DB_PORT_HOST
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: BACKEND_DB_NAME
+        - name: USER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: BACKEND_USER_NAME
+        - name: PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ems-secrets
+              key: backend-db-password
+        - name: DB_CONTAINER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: BACKEND_DB_HOST
+        - name: GCP_BUCKET_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: GCP_BUCKET_NAME
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/app/dataGcp.json"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ems-secrets
+              key: jwt-secret
+        - name: JWT_EXPIRATION
+          valueFrom:
+            configMapKeyRef:
+              name: ems-config
+              key: JWT_EXPIRATION
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ems-backend
+  namespace: ems
+  labels:
+    app: ems-backend
+    tier: backend
+spec:
+  selector:
+    app: ems-backend
+  ports:
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+  type: ClusterIP

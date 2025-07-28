@@ -12,11 +12,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  *
  * @author Andres Alarcon
+ * 
+ * Note: CORS is disabled here because the API Gateway handles CORS.
+ * Having CORS enabled in both Gateway and Backend causes duplicate headers
+ * which browsers reject.
  */
-@Configuration
+//@Configuration  // Commented out to disable CORS - API Gateway handles it
 public class CorsConfig {
 
-    @Bean
+    //@Bean  // Commented out to disable CORS - API Gateway handles it
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override

@@ -19,8 +19,7 @@ spec:
     spec:
       containers:
       - name: ems-legacy
-        image: ems-legacy:latest
-        imagePullPolicy: Never  # For local development
+        image: us-central1-docker.pkg.dev/the-text-466701-k2/gae-standard/legacy:v1.0.2
         ports:
         - containerPort: 8082
         env:

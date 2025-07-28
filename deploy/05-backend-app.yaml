@@ -19,8 +19,7 @@ spec:
     spec:
       containers:
       - name: ems-backend
-        image: ems-backend:latest
-        imagePullPolicy: Never  # For local development
+        image: us-central1-docker.pkg.dev/the-text-466701-k2/gae-standard/backend:v1.0.3
         ports:
         - containerPort: 8081
         env:
